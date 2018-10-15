@@ -15,6 +15,6 @@ $Webpages = @(
 	"https://open.spotify.com/browse?utm_medium=www_deviceslink&utm_source=www.spotify.com&utm_campaign=redirect.webplayerlink&utm_content=f1ece4711e85aabd84fc37b5d790feb9"	
 )
 
-foreach ($page in Webpages) {
+foreach ($page in $Webpages) {
 	[System.Diagnostics.Process]::Start($browser,$page)
 }
