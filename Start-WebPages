@@ -1,0 +1,20 @@
+#This will attempt to start the designated webpages in the same process using FireFox.
+
+$Browser = "Firefox.exe"
+
+if ((Get-Process | Select ProcessName | Where ProcessName -Like FireFox) -eq $null ) {
+	Start-Process Firefox.exe
+}
+
+Start-Sleep -Seconds 2
+
+$Webpages = @(
+	"outlook.office.com",
+	"outlook.live.com",
+	"https://web.skype.com/en",
+	"https://open.spotify.com/browse?utm_medium=www_deviceslink&utm_source=www.spotify.com&utm_campaign=redirect.webplayerlink&utm_content=f1ece4711e85aabd84fc37b5d790feb9"	
+)
+
+foreach ($page in Webpages) {
+	[System.Diagnostics.Process]::Start($browser,$page)
+}
