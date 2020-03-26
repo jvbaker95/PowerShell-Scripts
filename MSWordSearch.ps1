@@ -1,4 +1,4 @@
-﻿#Hides PowerShell Console on creation if called.
+#Hides PowerShell Console on creation if called.
 Function Hide-PSWindow {
     Add-Type -Name Window -Namespace Console -MemberDefinition '
     [DllImport("Kernel32.dll")]
@@ -154,7 +154,9 @@ Function Get-StringInWord {
         [Object[]]$Files
     ) 
 
-    if ( ($Files.Count -eq 0) -or ($Word -eq "") ) {
+    $validFiles = $Files | Where-Object { ( $_.contains(".docx") ) -or ( $_.contains(".doc") ) }
+
+    if ( ($validFiles.Count -eq 0) -or ($Word -eq "") ) {
         Create-MessageBox -Message "Can't search for nothing!`n`nClick OK to return to main menu." -Title "Null Exception!" -ButtonOptions OK -Icon Error
         return
     }      
@@ -163,8 +165,6 @@ Function Get-StringInWord {
 
     $WordApplication = New-Object -ComObject word.application
     $WordApplication.visible = $false
-
-    $validFiles = $Files | Where-Object { ( $_.contains(".docx") ) -or ( $_.contains(".doc") ) }
 
     ForEach ($file in $validFiles) {
         $document = $WordApplication.documents.open($file,$false,$true)
