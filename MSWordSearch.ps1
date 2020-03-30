@@ -145,6 +145,7 @@ Function WordSearchMenu {
     while ($Listen -ne "Cancel") {
         $Listen = $Form.ShowDialog()
     }
+    Get-Process WINWORD | Stop-Process
     return $Form
 }
 
@@ -185,8 +186,10 @@ Function Get-StringInWord {
     $WordApplication.quit()
 
     return $List | Out-GridView -OutputMode Multiple -Title "Results for '$word'"
+
+    
 }
 
-Hide-PSWindow
+Hide-PSWindow | Out-Null
 
-WordSearchMenu
+WordSearchMenu | Out-Null
