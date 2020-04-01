@@ -80,6 +80,10 @@ Function Create-MessageBox {
 
 # This was a GUI built using POSHGUI with some modifications.
 Function WordSearchMenu {
+    
+    # Get all existing winword instances and keep them in memory; we will not exit those.
+    $ExistingWinwordInstances = Get-Process Winword | Select -ExpandProperty Id
+    
     Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.Application]::EnableVisualStyles()
 
@@ -164,7 +168,7 @@ Function WordSearchMenu {
     }
 
     # If the user opts to finally close the program, exit out of all Word instances; future versions of this will kill only the instances in question.
-    Get-Process WINWORD -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+    # Get-Process WINWORD -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
     
     return $Form
 }
