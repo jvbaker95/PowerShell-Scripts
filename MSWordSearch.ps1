@@ -1,4 +1,5 @@
 #Hides PowerShell Console on creation if called.
+#from GUI-Functions.psm1.
 Function Hide-PSWindow {
     Add-Type -Name Window -Namespace Console -MemberDefinition '
     [DllImport("Kernel32.dll")]
@@ -11,12 +12,14 @@ Function Hide-PSWindow {
 }
 
 #This will create a file prompt.
+#from GUI-Functions.psm1.
 Function Create-FilePrompt {
     Param(
         [Parameter(Mandatory=$false)][Object]$InitialDirectory=$env:HOMEDRIVE,
         [Parameter(Mandatory=$false)][Object]$Title="Open",
         [Parameter(Mandatory=$false)][ValidateSet("Open","Save")][String]$PromptType="Open",
-        [Parameter(Mandatory=$false)][Switch]$EnableMultiSelect=$false
+        [Parameter(Mandatory=$false)][Switch]$EnableMultiSelect=$false,
+        [Parameter(Mandatory=$false)][Object]$FileFilter="All files (*.*)|*.*"
     )
     switch ($PromptType) {
         ("Open") {
@@ -29,19 +32,29 @@ Function Create-FilePrompt {
     }
     $FileDialog.Multiselect = $EnableMultiSelect
     $FileDialog.InitialDirectory = $InitialDirectory
-    $FileDialog.Filter = "All Files (*.*) | *.*"
+    $FileDialog.Filter = $FileFilter
     $FileDialog.Title = $Title
-    $FileDialog.ShowDialog() | Out-Null
+    $UserInput = $FileDialog.ShowDialog() 
 
-    if ($EnableMultiSelect) {
-        return $FileDialog.FileNames
+    switch ($UserInput) {
+
+        ("OK") {
+            if ($EnableMultiSelect) {
+                return $FileDialog.FileNames
+            }
+            else {
+                return $FileDialog.FileName
+            }
+        }
+
+        ("Cancel") {
+            return $UserInput
+        }
     }
-    else {
-        return $FileDialog.FileName
-    }
-} 
+}
 
 #This will create form boxes where a target user can enter input in a UI-Box.
+#from GUI-Functions.psm1.
 Function Create-FormBox {
     Param(
         [Parameter(Mandatory=$false)][Object]$Title=" ",
@@ -52,6 +65,7 @@ Function Create-FormBox {
 }
 
 #This will create a message box that relays information to the user in a friendly manner.
+#from GUI-Functions.psm1.
 Function Create-MessageBox {
     param(
         [Parameter(Mandatory=$true)][Object]$Message,
@@ -64,6 +78,7 @@ Function Create-MessageBox {
     Return [System.Windows.Forms.MessageBox]::Show($Message,$Title,$ButtonOptions,$Icon)
 }
 
+# This was a GUI built using POSHGUI with some modifications.
 Function WordSearchMenu {
     Add-Type -AssemblyName System.Windows.Forms
     [System.Windows.Forms.Application]::EnableVisualStyles()
@@ -133,19 +148,24 @@ Function WordSearchMenu {
 
     $Form.controls.AddRange(@($M_Word_Search,$A_Add_File,$B_Quit,$B_Remove_File,$B_Execute,$f_FileList,$T_Message))
 
-    $A_Add_File.Add_Click({ (Create-FilePrompt -EnableMultiSelect) | Foreach {$F_FileList.rows.add($_)} })
+    # Add click functions for each button; Add_file uses a file prompt that filters for exclusively .docx's and .docs since the other document formats have not been tested.
+    $A_Add_File.Add_Click({ (Create-FilePrompt -EnableMultiSelect -FileFilter "All Word Documents (*.docx; *.doc)|*.doc?") | Where-Object {$_ -ne "Cancel"} | Foreach {$F_FileList.rows.add($_)} })
     $B_Remove_File.Add_Click({ $f_FileList.rows.Clear() })
     $B_Quit.Add_Click({ $Form.close() })
     $Form.Add_Click({  })
     $Form.Add_Activated({  })
-    $B_Execute.Add_Click({ Get-StringInWord -Word $M_Word_Search.Text -Files $f_FileList.Rows.Cells.FormattedValue })
+    $B_Execute.Add_Click({ Get-StringInWord -Word $M_Word_Search.Text -Files $f_FileList.Rows.Cells.FormattedValue }) # The main engine - this actually does the word search.
     
     $Listen = $Form.ShowDialog()
 
+    # Keep the menu showing as long as the user doesn't voluntarily or force-exits the program.
     while ($Listen -ne "Cancel") {
         $Listen = $Form.ShowDialog()
     }
-    Get-Process WINWORD | Stop-Process
+
+    # If the user opts to finally close the program, exit out of all Word instances; future versions of this will kill only the instances in question.
+    Get-Process WINWORD -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+    
     return $Form
 }
 
@@ -155,6 +175,7 @@ Function Get-StringInWord {
         [Object[]]$Files
     ) 
 
+    # A last-validation step to make sure files are valid formats.
     $validFiles = $Files | Where-Object { ( $_.contains(".docx") ) -or ( $_.contains(".doc") ) }
 
     if ( ($validFiles.Count -eq 0) -or ($Word -eq "") ) {
@@ -164,6 +185,10 @@ Function Get-StringInWord {
 
     $List = [System.Collections.ArrayList]::new($files.Count)
 
+
+    # This opens up a word instance under the hood and opens each document separately and searches for the requested info.
+    # If the word is found (not case-sensitive), then mark it positive, and negative otherwise, then add it to an arraylist for 
+    # viewing using Out-Gridview.
     $WordApplication = New-Object -ComObject word.application
     $WordApplication.visible = $false
 
@@ -186,8 +211,6 @@ Function Get-StringInWord {
     $WordApplication.quit()
 
     return $List | Out-GridView -OutputMode Multiple -Title "Results for '$word'"
-
-    
 }
 
 Hide-PSWindow | Out-Null
